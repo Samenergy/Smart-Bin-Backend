@@ -14,9 +14,8 @@ const authMiddleware = (req, res, next) => {
     const token = authHeader.split(' ')[1];
 
     try {
-        // Verify token validity
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded; // Attach decoded user information to request object
+        req.user = decoded; 
         next();
     } catch (error) {
         res.status(401).json({ message: 'Token is not valid' });

@@ -6,7 +6,8 @@ const performanceLogSchema = new Schema({
   houseNumber: { type: String, required: true },
   wasteType: { type: String, required: true },
   date: { type: Date, default: Date.now },
-  days: { type: Number, required: true },
+  days: { type: String, required: true },
+  time: { type: String, required: true },
 });
 
 const wasteCollectionServiceSchema = new Schema({
@@ -16,7 +17,7 @@ const wasteCollectionServiceSchema = new Schema({
   contactPhone: { type: String, required: true },
   district: { type: String, required: true },
   password: { type: String, required: true },
-  performanceLog: [performanceLogSchema], 
+  performanceLog: [performanceLogSchema],
 });
 
 const WasteCollectionService = model(

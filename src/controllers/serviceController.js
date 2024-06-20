@@ -37,6 +37,7 @@ const getServiceAreas = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 const getCollectionSchedules = async (req, res) => {
   try {
     const service = await WasteCollectionService.findById(req.user.id);
@@ -49,26 +50,26 @@ const getCollectionSchedules = async (req, res) => {
 
     const district = service.district;
 
-    // Find household users in the same district and populate their wasteCollectionSchedules
     const householdUsers = await HouseholdUser.find({ district }).populate(
       "wasteCollectionSchedules"
     );
 
-    // Prepare response data
-    const schedulesWithUsers = householdUsers.map((user) => ({
-      username: user.username,
-      phonenumber: user.phonenumber,
-      street: user.street,
-      schedules: user.wasteCollectionSchedules.map((schedule) => ({
-        _id: schedule._id,
-        wasteType: schedule.wasteType,
-        schedule: schedule.schedule,
-        coordinates: {
-          longitude: schedule.longitude,
-          latitude: schedule.latitude,
-        },
-      })),
-    }));
+    const schedulesWithUsers = householdUsers
+      .filter((user) => user.wasteCollectionSchedules.length > 0)
+      .map((user) => ({
+        username: user.username,
+        phonenumber: user.phonenumber,
+        street: user.street,
+        schedules: user.wasteCollectionSchedules.map((schedule) => ({
+          _id: schedule._id,
+          wasteType: schedule.wasteType,
+          schedule: schedule.schedule,
+          coordinates: {
+            longitude: schedule.longitude,
+            latitude: schedule.latitude,
+          },
+        })),
+      }));
 
     res.json(schedulesWithUsers);
   } catch (error) {
@@ -78,97 +79,112 @@ const getCollectionSchedules = async (req, res) => {
 };
 
 const getPerformanceLogs = async (req, res) => {
+  const { _id } = req.params;
+
   try {
-    const service = await WasteCollectionService.findById(req.user.id);
+    // Find the waste collection service by _id
+    const service = await WasteCollectionService.findById(_id);
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" });
+      return res
+        .status(404)
+        .json({ error: "Waste collection service not found" });
     }
 
+    // Return the performance logs
     res.json(service.performanceLog);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error fetching performance logs:", error);
+    res.status(500).json({ error: "Failed to fetch performance logs" });
   }
 };
-
 const addPerformanceLog = async (req, res) => {
-  const { houseNumber, wasteType, days } = req.body;
+  const { _id } = req.params;
+  const { houseNumber, wasteType, days, time } = req.body;
 
   try {
-    const service = await WasteCollectionService.findById(req.user.id);
+    // Find the waste collection service by _id
+    const service = await WasteCollectionService.findById(_id);
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" });
+      return res
+        .status(404)
+        .json({ error: "Waste collection service not found" });
     }
 
-    const newLog = {
-      houseNumber,
-      wasteType,
-      days,
-    };
-
-    service.performanceLog.push(newLog);
+    // Add new performance log
+    service.performanceLog.push({ houseNumber, wasteType, days, time });
     await service.save();
 
-    res.status(201).json({ message: "Performance log added", log: newLog });
+    res.status(201).json(service.performanceLog);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error adding performance log:", error);
+    res.status(500).json({ error: "Failed to add performance log" });
   }
 };
 
+// PUT /api/waste-collection-services/:_id/performance-logs/:logId
 const updatePerformanceLog = async (req, res) => {
-  const { logId } = req.params;
-  const { houseNumber, wasteType, days } = req.body;
+  const { _id, logId } = req.params;
+  const { houseNumber, wasteType, days, time } = req.body;
 
   try {
-    const service = await WasteCollectionService.findById(req.user.id);
+    // Find the waste collection service by _id
+    const service = await WasteCollectionService.findById(_id);
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" });
+      return res
+        .status(404)
+        .json({ error: "Waste collection service not found" });
     }
 
+    // Find the performance log by logId
     const logToUpdate = service.performanceLog.id(logId);
+
     if (!logToUpdate) {
-      return res.status(404).json({ message: "Performance log not found" });
+      return res.status(404).json({ error: "Performance log not found" });
     }
 
-    logToUpdate.houseNumber = houseNumber || logToUpdate.houseNumber;
-    logToUpdate.wasteType = wasteType || logToUpdate.wasteType;
-    logToUpdate.days = days || logToUpdate.days;
+    // Update fields
+    logToUpdate.houseNumber = houseNumber;
+    logToUpdate.wasteType = wasteType;
+    logToUpdate.days = days;
+    logToUpdate.time = time;
 
     await service.save();
 
-    res.json({ message: "Performance log updated", log: logToUpdate });
+    res.json(logToUpdate);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error updating performance log:", error);
+    res.status(500).json({ error: "Failed to update performance log" });
   }
 };
 
 const deletePerformanceLog = async (req, res) => {
-  const { logId } = req.params;
+  const { _id, logId } = req.params;
 
   try {
-    const service = await WasteCollectionService.findById(req.user.id);
+    // Find the waste collection service by _id
+    const service = await WasteCollectionService.findById(_id);
 
     if (!service) {
-      return res.status(404).json({ message: "Service not found" });
+      return res
+        .status(404)
+        .json({ error: "Waste collection service not found" });
     }
 
-    const logToRemove = service.performanceLog.id(logId);
-    if (!logToRemove) {
-      return res.status(404).json({ message: "Performance log not found" });
-    }
+    // Filter out the performance log to delete
+    service.performanceLog = service.performanceLog.filter(
+      (log) => log._id.toString() !== logId
+    );
 
-    logToRemove.remove();
+    // Save the updated service
     await service.save();
 
-    res.json({ message: "Performance log deleted" });
+    res.json({ message: "Performance log deleted successfully" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Error deleting performance log:", error);
+    res.status(500).json({ error: "Failed to delete performance log" });
   }
 };
 

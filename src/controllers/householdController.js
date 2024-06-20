@@ -148,7 +148,49 @@ const addRecyclingLogEntry = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const editRecyclingLogEntry = async (req, res) => {
+  try {
+    const user = await HouseholdUser.findById(req.user.id);
+    const logEntryIndex = user.recyclingLog.findIndex(
+      (entry) => entry._id.toString() === req.params.entryId
+    );
 
+    if (logEntryIndex === -1) {
+      return res.status(404).json({ message: "Log entry not found" });
+    }
+
+    // Update the log entry with new data
+    user.recyclingLog[logEntryIndex].materialType = req.body.materialType;
+    user.recyclingLog[logEntryIndex].amount = req.body.amount;
+    user.recyclingLog[logEntryIndex].date = req.body.date; // Assuming you update date as well
+
+    await user.save();
+    res.json(user.recyclingLog);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+const deleteRecyclingLogEntry = async (req, res) => {
+  try {
+    const user = await HouseholdUser.findById(req.user.id);
+    const logEntryIndex = user.recyclingLog.findIndex(
+      (entry) => entry._id.toString() === req.params.entryId
+    );
+
+    if (logEntryIndex === -1) {
+      return res.status(404).json({ message: "Log entry not found" });
+    }
+
+    user.recyclingLog.splice(logEntryIndex, 1); // Remove the entry from the array
+    await user.save();
+    res.json(user.recyclingLog);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 export {
   getHouseholdProfile,
   updateHouseholdProfile,
@@ -158,4 +200,6 @@ export {
   deleteHouseholdSchedule,
   getRecyclingLog,
   addRecyclingLogEntry,
+  deleteRecyclingLogEntry,
+  editRecyclingLogEntry,
 };

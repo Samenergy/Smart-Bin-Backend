@@ -7,7 +7,9 @@ import {
     updateHouseholdSchedule,
     deleteHouseholdSchedule,
     getRecyclingLog,
-    addRecyclingLogEntry
+    addRecyclingLogEntry,
+    editRecyclingLogEntry,
+    deleteRecyclingLogEntry
 } from '../controllers/householdController.js';
 import authMiddleware from '../middleware/authMiddleware.js';
 
@@ -21,5 +23,7 @@ router.put('/schedules/:scheduleId', authMiddleware, updateHouseholdSchedule);
 router.delete('/schedules/:scheduleId', authMiddleware, deleteHouseholdSchedule);
 router.get('/recycling-log', authMiddleware, getRecyclingLog);
 router.post('/recycling-log', authMiddleware, addRecyclingLogEntry);
+router.delete('/recycling-log/:entryId', authMiddleware, deleteRecyclingLogEntry);
+router.put('/recycling-log/:entryId', authMiddleware, editRecyclingLogEntry);
 
 export default router;
